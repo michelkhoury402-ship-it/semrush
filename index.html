@@ -1,0 +1,494 @@
+import { useState, useEffect, useRef } from "react";
+
+const PURPLE = "#7B61FF";
+const PURPLE_DEEP = "#5A3FD6";
+const GREEN = "#00C48C";
+const GREEN_LIGHT = "#00E6A0";
+const DEEP_BG = "#08080E";
+const CARD_BG = "#0F0F18";
+const BORDER = "#1A1A28";
+const TEXT_PRIMARY = "#ECEAE6";
+const TEXT_SECONDARY = "#9590A0";
+const TEXT_MUTED = "#5C5768";
+
+function useInView(threshold = 0.15) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVis(true); obs.unobserve(el); } }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, vis];
+}
+
+function AnimatedCounter({ target, suffix = "", prefix = "", duration = 1800 }) {
+  const [count, setCount] = useState(0);
+  const [ref, vis] = useInView(0.3);
+  useEffect(() => {
+    if (!vis) return;
+    let s = 0;
+    const step = target / (duration / 16);
+    const t = setInterval(() => { s += step; if (s >= target) { setCount(target); clearInterval(t); } else setCount(Math.floor(s)); }, 16);
+    return () => clearInterval(t);
+  }, [vis, target, duration]);
+  return <span ref={ref}>{prefix}{typeof target === "number" && target % 1 !== 0 ? count.toFixed(1) : count}{suffix}</span>;
+}
+
+function Reveal({ children, delay = 0, direction = "up" }) {
+  const [ref, vis] = useInView(0.1);
+  const t = { up: "translateY(40px)", left: "translateX(-40px)", right: "translateX(40px)", none: "none" };
+  return (
+    <div ref={ref} style={{ opacity: vis ? 1 : 0, transform: vis ? "none" : t[direction], transition: `opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s, transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s` }}>
+      {children}
+    </div>
+  );
+}
+
+const NAV = [
+  { id: "hero", label: "Intro" },
+  { id: "state", label: "State of Play" },
+  { id: "competitive", label: "Landscape" },
+  { id: "strengths", label: "Strengths" },
+  { id: "problems", label: "Gaps" },
+  { id: "framework", label: "Framework" },
+  { id: "initiatives", label: "Initiatives" },
+  { id: "plan", label: "90-Day Plan" },
+  { id: "why", label: "Why Now" },
+];
+
+export default function SemrushLanding() {
+  const [active, setActive] = useState("hero");
+  const [progress, setProgress] = useState(0);
+  const [openProblem, setOpenProblem] = useState(null);
+
+  useEffect(() => {
+    const h = () => {
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
+      const sects = NAV.map(n => document.getElementById(n.id)).filter(Boolean);
+      for (let i = sects.length - 1; i >= 0; i--) {
+        if (sects[i].getBoundingClientRect().top <= 120) { setActive(NAV[i].id); break; }
+      }
+    };
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+
+  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const sec = { maxWidth: 900, margin: "0 auto", padding: "100px 28px" };
+  const label = { fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", color: GREEN, fontWeight: 600, marginBottom: 14, display: "block" };
+  const h2s = { fontSize: 36, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.2, margin: "0 0 20px" };
+  const body = { fontSize: 16, lineHeight: 1.75, color: TEXT_SECONDARY, margin: "0 0 20px" };
+
+  return (
+    <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", background: DEEP_BG, color: TEXT_PRIMARY, margin: 0, padding: 0, minHeight: "100vh" }}>
+      
+      <div style={{ position: "fixed", top: 0, left: 0, width: `${progress}%`, height: 3, background: `linear-gradient(90deg, ${GREEN}, ${PURPLE})`, zIndex: 1000, transition: "width 0.1s linear" }} />
+
+      <nav style={{ position: "fixed", top: 3, left: 0, right: 0, zIndex: 999, background: `${DEEP_BG}ee`, backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ maxWidth: 960, margin: "0 auto", display: "flex", gap: 0, overflowX: "auto", padding: "0 12px" }}>
+          {NAV.map(n => (
+            <button key={n.id} onClick={() => scrollTo(n.id)} style={{
+              padding: "13px 14px", border: "none", background: "transparent", cursor: "pointer",
+              fontSize: 12, fontWeight: active === n.id ? 600 : 400, whiteSpace: "nowrap",
+              color: active === n.id ? GREEN : TEXT_MUTED,
+              borderBottom: active === n.id ? `2px solid ${GREEN}` : "2px solid transparent",
+              transition: "all 0.25s ease", fontFamily: "inherit",
+            }}>{n.label}</button>
+          ))}
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <section id="hero" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -200, right: -200, width: 600, height: 600, borderRadius: "50%", background: `radial-gradient(circle, ${PURPLE}0a 0%, transparent 70%)`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -300, left: -200, width: 700, height: 700, borderRadius: "50%", background: `radial-gradient(circle, ${GREEN}08 0%, transparent 70%)`, pointerEvents: "none" }} />
+        
+        <div style={{ maxWidth: 780, padding: "0 28px", textAlign: "center", position: "relative" }}>
+          <Reveal delay={0.1}>
+            <div style={{ display: "inline-block", padding: "6px 16px", borderRadius: 20, border: `1px solid ${GREEN}33`, background: `${GREEN}0a`, marginBottom: 32 }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: GREEN, letterSpacing: "0.5px" }}>Strategic Product Marketing Assessment, April 2026</span>
+            </div>
+          </Reveal>
+          <Reveal delay={0.25}>
+            <h1 style={{ fontSize: 52, fontWeight: 800, lineHeight: 1.08, margin: "0 0 28px", letterSpacing: "-1.5px" }}>
+              Semrush Doesn't Have a<br />Product Problem.<br />
+              <span style={{ background: `linear-gradient(135deg, ${GREEN}, ${GREEN_LIGHT})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                It Has a Perception Problem.
+              </span>
+            </h1>
+          </Reveal>
+          <Reveal delay={0.4}>
+            <p style={{ fontSize: 18, lineHeight: 1.7, color: TEXT_SECONDARY, maxWidth: 600, margin: "0 auto 40px" }}>
+              A focused analysis of where Semrush stands today, what's holding the brand back, and a product marketing playbook to turn the world's deepest visibility data into the story the market actually needs to hear.
+            </p>
+          </Reveal>
+          <Reveal delay={0.55}>
+            <div style={{ display: "flex", justifyContent: "center", gap: 32, flexWrap: "wrap" }}>
+              {[["$444M", "FY25 Revenue"], ["$63M", "AI + Enterprise ARR"], ["$1.9B", "Adobe Acquisition"]].map(([val, l], i) => (
+                <div key={i} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: TEXT_PRIMARY }}>{val}</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* STATE OF SEMRUSH */}
+      <section id="state" style={{ background: CARD_BG, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
+        <div style={sec}>
+          <Reveal>
+            <span style={label}>01 — The State of Semrush</span>
+            <h2 style={h2s}>Three numbers that tell the whole story</h2>
+          </Reveal>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 36 }}>
+            {[
+              { num: "$63M", color: GREEN, title: "AI + Enterprise ARR", text: "AI products went from $4M to $38M in a single year (nearly 10x). Enterprise platform grew from $9M to $37M. Combined, these two engines are the entire growth narrative." },
+              { num: "74%", color: PURPLE, title: "Growth in $50K+ customers", text: "The top of the customer base is accelerating. Customers paying over $50K annually grew 74% YoY, while the $10K+ segment grew 31%. The upmarket motion is working." },
+              { num: "$1.9B", color: GREEN_LIGHT, title: "Adobe acquisition, closing H1 2026", text: "Stockholder-approved in February. Semrush becomes the visibility intelligence layer inside Adobe Experience Cloud. The market is about to change, and so is the role of product marketing here." },
+            ].map((item, i) => (
+              <Reveal key={i} delay={i * 0.12}>
+                <div style={{ display: "flex", gap: 24, padding: "28px 32px", background: DEEP_BG, border: `1px solid ${BORDER}`, borderRadius: 12, alignItems: "flex-start" }}>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: item.color, minWidth: 100, lineHeight: 1 }}>
+                    {item.num}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: "0 0 6px" }}>{item.title}</h3>
+                    <p style={{ fontSize: 14, lineHeight: 1.7, color: TEXT_SECONDARY, margin: 0 }}>{item.text}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* COMPETITIVE LANDSCAPE */}
+      <section id="competitive">
+        <div style={sec}>
+          <Reveal>
+            <span style={label}>02 — Competitive Landscape</span>
+            <h2 style={h2s}>Everyone compares features. The real gap is positioning.</h2>
+          </Reveal>
+
+          <Reveal delay={0.15}>
+            <div style={{ marginTop: 40, overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                <thead>
+                  <tr>
+                    {["Dimension", "Semrush", "Ahrefs", "Moz"].map((h, i) => (
+                      <th key={i} style={{ textAlign: "left", padding: "14px 16px", borderBottom: `2px solid ${GREEN}33`, color: i === 1 ? GREEN : TEXT_MUTED, fontWeight: 600, fontSize: 12, letterSpacing: "1px", textTransform: "uppercase" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Keyword Database", "27.5B, largest", "28.7B, comparable", "Smaller"],
+                    ["Backlink Referring Domains", "390M", "500M, leads", "Smaller"],
+                    ["Platform Breadth", "SEO + PPC + Content + Social + PR + AI", "SEO-focused only", "SEO-focused only"],
+                    ["AI Visibility Tracking", "ChatGPT, Gemini, Google AI", "Limited", "None"],
+                    ["Enterprise Motion", "33% YoY growth, 579 customers", "Limited sales motion", "Minimal presence"],
+                    ["Market Perception", '"Comprehensive but expensive"', '"Best for links"', '"Beginner-friendly"'],
+                  ].map((row, ri) => (
+                    <tr key={ri} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                      {row.map((cell, ci) => (
+                        <td key={ci} style={{ padding: "14px 16px", color: ci === 0 ? TEXT_PRIMARY : ci === 1 ? TEXT_PRIMARY : TEXT_MUTED, fontWeight: ci === 0 ? 600 : 400, fontSize: 13 }}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.3}>
+            <div style={{ marginTop: 28, padding: "22px 28px", borderLeft: `3px solid ${GREEN}`, background: `${GREEN}06`, borderRadius: "0 10px 10px 0" }}>
+              <p style={{ fontSize: 15, lineHeight: 1.7, color: TEXT_SECONDARY, margin: 0 }}>
+                Semrush leads on breadth, data scale, and AI visibility, but Ahrefs owns the backlink narrative and practitioner loyalty, while Moz captures budget-conscious beginners. The core challenge isn't a feature gap; it's a positioning gap. The market still categorizes Semrush as "an expensive SEO tool" rather than "the operating system for brand visibility." Reframing this perception is the single highest-leverage job for product marketing.
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* STRENGTHS */}
+      <section id="strengths" style={{ background: CARD_BG, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
+        <div style={sec}>
+          <Reveal>
+            <span style={label}>03 — What Semrush Gets Right</span>
+            <h2 style={h2s}>Foundations product marketing should amplify</h2>
+          </Reveal>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 36 }}>
+            {[
+              { num: "01", title: "The Data Moat Is Real and Undermarketed", text: "27.5 billion keywords, 43 trillion backlinks, 808 million domains, 213M+ LLM prompts tracked. Amazon, JPMorganChase, and TikTok trust this data. Yet the average buyer encounters it as a bullet point, not as a trust argument." },
+              { num: "02", title: "AI Visibility Is a Category-Creation Moment", text: "AI product ARR grew nearly 10x to $38M in 2025. Semrush tripled its own AI share of voice from 13% to 32% in a single month. Over 10% of all customers already use at least one AI product. This first-mover advantage in GEO needs sustained narrative investment." },
+              { num: "03", title: "The Enterprise Flywheel Is Spinning", text: "Enterprise segment growing 33% YoY. 35+ agencies in the partner program. Forrester Leader status, IDC recognition. The mid-market to enterprise transition is working; product marketing should codify it into a repeatable narrative." },
+            ].map((card, i) => (
+              <Reveal key={i} delay={i * 0.12}>
+                <div style={{ display: "flex", gap: 24, padding: "28px 32px", background: DEEP_BG, border: `1px solid ${BORDER}`, borderRadius: 10 }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: `${PURPLE}30`, lineHeight: 1, minWidth: 48 }}>{card.num}</div>
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: TEXT_PRIMARY, margin: "0 0 10px" }}>{card.title}</h3>
+                    <p style={{ fontSize: 14, lineHeight: 1.75, color: TEXT_SECONDARY, margin: 0 }}>{card.text}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PROBLEMS */}
+      <section id="problems">
+        <div style={sec}>
+          <Reveal>
+            <span style={label}>04 — The Five Gaps No One Is Talking About</span>
+            <h2 style={h2s}>Where product marketing has the highest-impact opportunity</h2>
+          </Reveal>
+          <div style={{ marginTop: 36, display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              {
+                title: 'The market sees "expensive SEO tool," not "visibility platform"',
+                evidence: "Price is the #1 complaint across Trustpilot, G2, and Capterra. Reviewers consistently say \"great tool, too expensive.\" Yet the $50K+ segment (those who grasp the full value) is growing 74% YoY.",
+                impact: "Every prospect who churns after a trial because they think \"$140/month is a lot for keyword research\" is a product marketing failure. They never understood they were buying a visibility operating system."
+              },
+              {
+                title: "50 tools, no clear path: the onboarding complexity crisis",
+                evidence: "89% of Semrush's 28M+ users are on the free plan and never convert. Multiple reviewers describe it as \"overwhelming\" and \"not beginner-friendly.\" The cancellation process requires 5+ screens, generating disproportionate negative sentiment.",
+                impact: "Most users need 3 to 5 tools out of 50+. The job is to guide them there fast, prove value in the first session, and make the rest a growth path, not a source of confusion."
+              },
+              {
+                title: "AI visibility coverage has visible holes",
+                evidence: "The toolkit doesn't yet track Claude (Anthropic), full Perplexity coverage, or Meta AI. Multiple 2026 reviews call these out specifically. Missing major LLMs is an objection in every enterprise conversation.",
+                impact: "In category creation, perceived comprehensiveness matters as much as actual capability. Frame coverage as \"the widest and fastest-expanding\" rather than claiming completeness."
+              },
+              {
+                title: "The pricing architecture creates confusion, not confidence",
+                evidence: "Semrush One vs. SEO Classic vs. standalone toolkits vs. App Center vs. Enterprise. Seats cost $45 to $100 plus $99/user for AI Visibility. One analysis noted adding a team member can \"easily double the cost.\"",
+                impact: "Confusion at the point of purchase kills conversion. Product marketing should own the packaging narrative: simplify communication, make the recommended path unmissable, address seat pricing transparently."
+              },
+              {
+                title: "Customer support is undermining the brand promise",
+                evidence: "Support is the #1 operational weakness across all review platforms. The AI chatbot fails on basic queries. Human support reportedly only available during US hours. Refund policy described as \"extremely rigid.\"",
+                impact: "Product marketing can reduce dependency through self-service enablement, better docs, community forums, and proactive education. Shift perception from \"they don't help\" to \"they make it easy.\""
+              }
+            ].map((p, i) => (
+              <Reveal key={i} delay={i * 0.08}>
+                <div style={{
+                  border: `1px solid ${openProblem === i ? GREEN + "44" : BORDER}`, borderRadius: 10,
+                  background: openProblem === i ? `${GREEN}05` : CARD_BG, transition: "all 0.3s ease", overflow: "hidden",
+                }}>
+                  <button onClick={() => setOpenProblem(openProblem === i ? null : i)} style={{
+                    width: "100%", padding: "20px 24px", border: "none", background: "transparent", cursor: "pointer",
+                    display: "flex", alignItems: "flex-start", gap: 16, textAlign: "left", fontFamily: "inherit",
+                  }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: GREEN, minWidth: 28, marginTop: 2 }}>0{i + 1}</span>
+                    <span style={{ fontSize: 16, fontWeight: 600, color: TEXT_PRIMARY, flex: 1 }}>{p.title}</span>
+                    <span style={{ color: GREEN, fontSize: 20, fontWeight: 300, minWidth: 20, textAlign: "center", transform: openProblem === i ? "rotate(45deg)" : "rotate(0deg)", transition: "transform 0.3s ease" }}>+</span>
+                  </button>
+                  {openProblem === i && (
+                    <div style={{ padding: "0 24px 24px 58px" }}>
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: GREEN, letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 8 }}>The Evidence</div>
+                        <p style={{ fontSize: 14, lineHeight: 1.75, color: TEXT_SECONDARY, margin: 0 }}>{p.evidence}</p>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: PURPLE, letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 8 }}>Why This Matters</div>
+                        <p style={{ fontSize: 14, lineHeight: 1.75, color: TEXT_SECONDARY, margin: 0 }}>{p.impact}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FRAMEWORK */}
+      <section id="framework" style={{ background: CARD_BG, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
+        <div style={sec}>
+          <Reveal>
+            <span style={label}>05 — My Product Marketing Framework</span>
+            <h2 style={h2s}>The Visibility Positioning Engine</h2>
+            <p style={{ ...body, maxWidth: 640 }}>Every initiative should serve at least two of these four lenses simultaneously. This is a system for prioritization, not a checklist.</p>
+          </Reveal>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 40 }}>
+            {[
+              { icon: "◇", title: "Narrative Architecture", desc: "What story does the market tell about us vs. the one we want?", detail: 'Move from "all-in-one SEO tool" to "the platform that makes brands discoverable everywhere." The Adobe acquisition makes this reframing both urgent and possible.' },
+              { icon: "△", title: "Buyer Enablement", desc: "How easy is it to understand, believe, and buy with confidence?", detail: "ROI calculator, persona-based buying guides, simplified pricing, transparent competitive positioning, frictionless trial-to-paid. Every dollar making it easier to buy returns more than a dollar generating traffic." },
+              { icon: "○", title: "Customer Success Marketing", desc: "How do we turn paying customers into expanding advocates?", detail: "With 104% NRR, there's decent retention but limited expansion. Drive cross-toolkit adoption, celebrate wins publicly, build a certification ecosystem that makes Semrush expertise a career asset." },
+              { icon: "□", title: "Competitive Moat Storytelling", desc: "How do we make structural advantages feel inevitable?", detail: 'Stop defending individual features. Tell a systems story: "Only Semrush connects keyword intelligence, competitive analysis, content optimization, AI visibility, and campaign execution. That connection is where insight lives."' }
+            ].map((lens, i) => (
+              <Reveal key={i} delay={i * 0.1}>
+                <div style={{ padding: "28px", background: DEEP_BG, border: `1px solid ${BORDER}`, borderRadius: 10, height: "100%", display: "flex", flexDirection: "column" }}>
+                  <div style={{ fontSize: 28, color: PURPLE, marginBottom: 12, opacity: 0.6 }}>{lens.icon}</div>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: "0 0 8px" }}>{lens.title}</h3>
+                  <p style={{ fontSize: 14, color: GREEN, margin: "0 0 14px", fontWeight: 500 }}>{lens.desc}</p>
+                  <p style={{ fontSize: 13, lineHeight: 1.7, color: TEXT_SECONDARY, margin: 0, flex: 1 }}>{lens.detail}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* INITIATIVES */}
+      <section id="initiatives">
+        <div style={sec}>
+          <Reveal>
+            <span style={label}>06 — Twelve Initiatives I Would Prioritize</span>
+            <h2 style={h2s}>A focused product marketing roadmap</h2>
+          </Reveal>
+          {[
+            { phase: "Quick Wins", time: "Month 1-2", color: GREEN, items: [
+              ["Rewrite the Pricing Page Story", "Lead with use cases, not plan names. Route personas to their recommended plan with ROI framing. A/B test against the current page."],
+              ["Build Competitive Battle Cards", "Structured cards for Ahrefs, Moz, BrightEdge, Conductor, SE Ranking. Objection handlers, win stories, positioning traps."],
+              ["Create Adobe Acquisition FAQ", "Own the messaging: what changes, what stays, why it's good. Distribute through sales, CS, and the website before people ask."],
+              ["Publish \"AI Era\" Sales One-Pager", "Single-page PDF for every outbound email. Include the \"tripled AI share of voice\" proof point."],
+            ]},
+            { phase: "Foundation Builders", time: "Month 2-4", color: PURPLE, items: [
+              ["Launch Persona-Based Visibility Playbooks", "4 curated playbooks: Agency Growth, E-commerce, Enterprise Brand Safety, Content Team. Maps the 5 to 7 tools each persona needs."],
+              ["Build the Semrush ROI Calculator", "Interactive tool showing consolidation savings. \"Average customer replaces 3.2 tools.\" Centerpiece of website and sales enablement."],
+              ["Initiate the \"State of GEO\" Report", "Industry's first research on Generative Engine Optimization. Positions Semrush as the definitive category authority."],
+              ["Establish Customer Advisory Board", "15 to 20 customers from the $50K+ segment. Quarterly meetings, beta access, co-marketing opportunities."],
+            ]},
+            { phase: "Growth Engines", time: "Month 4-6+", color: "#3B82F6", items: [
+              ["Launch Certification Ecosystem", "Career-relevant certifications visible on LinkedIn. Every certified professional becomes an advocate inside their organization."],
+              ["Create Vertical Campaign Tracks", "Dedicated campaigns for e-commerce, SaaS, healthcare, finance. Differentiates from horizontal-only competitors."],
+              ["Transform App Center Into Marketplace", "Curate bundles by use case, feature partner stories, build co-marketing. Deepens switching costs."],
+              ["Build Adobe Integration Vision Campaign", "\"Semrush + Adobe Experience Cloud = most complete visibility stack.\" Critical for retention through the transition."],
+            ]},
+          ].map((g, gi) => (
+            <Reveal key={gi} delay={gi * 0.15}>
+              <div style={{ marginTop: gi === 0 ? 36 : 48 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: g.color }} />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>{g.phase}</span>
+                  <span style={{ fontSize: 12, color: TEXT_MUTED }}>{g.time}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  {g.items.map(([t, d], ii) => (
+                    <div key={ii} style={{ padding: "20px 22px", background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 8, borderLeft: `3px solid ${g.color}30` }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, margin: "0 0 8px" }}>{t}</h4>
+                      <p style={{ fontSize: 13, lineHeight: 1.65, color: TEXT_SECONDARY, margin: 0 }}>{d}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* 90-DAY PLAN */}
+      <section id="plan" style={{ background: CARD_BG, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
+        <div style={sec}>
+          <Reveal>
+            <span style={label}>07 — The 90-Day Plan</span>
+            <h2 style={h2s}>What the first three months look like</h2>
+          </Reveal>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginTop: 40 }}>
+            {[
+              { days: "01-30", title: "Listen & Diagnose", color: GREEN, items: [
+                "20+ stakeholder interviews across sales, CS, product, partnerships",
+                "Audit all competitive positioning materials and sales collateral",
+                "Deep-dive into NRR, churn, and expansion data by segment",
+                "Analyze win/loss data from last 6 months of enterprise deals",
+                "Deliver: Adobe acquisition messaging guide",
+                "Deliver: \"Why Semrush in the AI Era\" sales one-pager",
+              ]},
+              { days: "31-60", title: "Build the Foundation", color: PURPLE, items: [
+                "Launch competitive intelligence program with top-5 battle cards",
+                "Design first 2 Visibility Playbooks (Agency + E-commerce)",
+                "Initiate \"State of GEO\" research with data science",
+                "A/B test pricing page redesign leading with use cases",
+                "Begin Customer Advisory Board recruitment from $50K+ segment",
+                "Deliver: Battle cards + sales training session",
+              ]},
+              { days: "61-90", title: "Launch & Measure", color: "#3B82F6", items: [
+                "Publish first Visibility Playbook, measure pipeline influence",
+                "Present GEO category ownership strategy to CMO",
+                "Deliver comprehensive competitive positioning document",
+                "Propose certification ecosystem and vertical campaign roadmap",
+                "Present win/loss insights to sales leadership",
+                "Deliver: First results report + 6-month strategic roadmap",
+              ]},
+            ].map((phase, i) => (
+              <Reveal key={i} delay={i * 0.15}>
+                <div style={{ padding: "28px 24px", background: DEEP_BG, border: `1px solid ${BORDER}`, borderRadius: 10, borderTop: `3px solid ${phase.color}`, height: "100%" }}>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: `${phase.color}22`, marginBottom: 4 }}>D{phase.days}</div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY, margin: "0 0 18px" }}>{phase.title}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {phase.items.map((item, ii) => (
+                      <div key={ii} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: phase.color, marginTop: 7, flexShrink: 0, opacity: 0.5 }} />
+                        <span style={{ fontSize: 13, lineHeight: 1.55, color: TEXT_SECONDARY }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* WHY NOW */}
+      <section id="why">
+        <div style={{ ...sec, maxWidth: 680 }}>
+          <Reveal><span style={label}>08 — Why This Role, Why Now</span></Reveal>
+          <Reveal delay={0.15}>
+            <h2 style={{ ...h2s, fontSize: 32 }}>The next 12 months will define what Semrush becomes inside Adobe.</h2>
+          </Reveal>
+          <Reveal delay={0.25}>
+            <p style={body}>
+              Semrush is transitioning from a mid-market SEO tool to an enterprise brand visibility platform, while being absorbed into one of the largest marketing technology ecosystems in the world.
+            </p>
+          </Reveal>
+          <Reveal delay={0.35}>
+            <p style={body}>
+              This requires a product marketing leader who can operate at multiple altitudes: crafting the narrative that positions Semrush inside Adobe's vision, while building the ground-level enablement that helps a sales rep close a $50K deal against Ahrefs next Tuesday.
+            </p>
+          </Reveal>
+          <Reveal delay={0.45}>
+            <p style={body}>
+              It requires someone who understands that the biggest growth lever isn't more features. It's making the existing features feel inevitable. Semrush has built extraordinary technology. The market just doesn't fully understand what it has yet.
+            </p>
+          </Reveal>
+          <Reveal delay={0.55}>
+            <div style={{ marginTop: 32, padding: "32px", borderRadius: 12, background: `linear-gradient(135deg, ${GREEN}0c, ${PURPLE}0c)`, border: `1px solid ${GREEN}20` }}>
+              <p style={{ fontSize: 18, fontWeight: 600, color: TEXT_PRIMARY, lineHeight: 1.6, margin: 0 }}>
+                The product marketing decisions made now will compound for years: how the narrative is framed, how pricing is communicated, how the GEO category is established, how customers are retained through the transition.
+              </p>
+              <p style={{ fontSize: 18, fontWeight: 600, color: GREEN, margin: "16px 0 0", lineHeight: 1.6 }}>
+                I want to be the person supporting on product marketing.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.65}>
+            <div style={{ marginTop: 56, textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY }}>Michel Khoury</div>
+              <div style={{ fontSize: 14, color: TEXT_SECONDARY, marginTop: 8 }}>michelkhoury402@gmail.com · LinkedIn · +34 66 44 33 11 6</div>
+              <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 20, letterSpacing: "1px", textTransform: "uppercase" }}>
+                Prepared April 2026, Confidential
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      <footer style={{ padding: "32px 28px", textAlign: "center", borderTop: `1px solid ${BORDER}` }}>
+        <p style={{ fontSize: 11, color: TEXT_MUTED, letterSpacing: "1px", margin: 0 }}>
+          Based on publicly available data from Semrush earnings reports, product announcements, user reviews, and industry analysis.
+        </p>
+      </footer>
+    </div>
+  );
+}
